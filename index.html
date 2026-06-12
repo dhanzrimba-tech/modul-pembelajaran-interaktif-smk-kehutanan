@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="id" class="h-full">
+ <head><script src="/_sdk/telemetry_sdk.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modul Kehutanan Interaktif</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&amp;family=Playfair+Display:wght@700&amp;display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            forest: { 50:'#f0fdf4', 100:'#dcfce7', 200:'#bbf7d0', 300:'#86efac', 400:'#4ade80', 500:'#22c55e', 600:'#16a34a', 700:'#15803d', 800:'#166534', 900:'#14532d' },
+            bark: { 50:'#fdf8f0', 100:'#f5e6d3', 200:'#e8cba7', 300:'#d4a574', 400:'#b8834f', 500:'#8B5E3C', 600:'#6d4a2f', 700:'#553a25', 800:'#3d2a1a', 900:'#2a1d12' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Nunito', sans-serif; }
+    .heading-font { font-family: 'Playfair Display', serif; }
+    .section-card { animation: fadeUp 0.5s ease forwards; opacity: 0; transform: translateY(20px); }
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+    .drag-item { cursor: grab; transition: transform 0.2s, box-shadow 0.2s; }
+    .drag-item:active { cursor: grabbing; transform: scale(1.05); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
+    .drop-zone { transition: background 0.2s, border-color 0.2s; }
+    .drop-zone.drag-over { background: #dcfce7; border-color: #22c55e; }
+    .nav-item { transition: all 0.2s; }
+    .nav-item:hover { transform: translateX(4px); }
+    .nav-item.active { background: linear-gradient(135deg, #166534, #15803d); color: white; }
+    .quiz-option { transition: all 0.2s; }
+    .quiz-option:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .leaf-bg { background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 C20 15 10 25 15 35 C20 45 30 50 30 50 C30 50 40 45 45 35 C50 25 40 15 30 5Z' fill='none' stroke='%2322c55e' stroke-width='0.5' opacity='0.07'/%3E%3C/svg%3E"); }
+    .progress-bar { transition: width 0.5s ease; }
+    @keyframes pulse-green { 0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.4)} 50%{box-shadow:0 0 0 8px rgba(34,197,94,0)} }
+    .pulse-green { animation: pulse-green 2s infinite; }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-forest-50 leaf-bg overflow-hidden">
+  <div id="app" class="h-full w-full flex flex-col md:flex-row overflow-hidden"><!-- Sidebar Navigation -->
+   <nav id="sidebar" class="hidden md:flex flex-col w-72 bg-gradient-to-b from-forest-900 to-forest-800 text-white p-4 overflow-y-auto flex-shrink-0">
+    <div class="mb-6 text-center">
+     <div class="text-3xl mb-2">
+      🌲
+     </div>
+     <h1 id="sidebar-title" class="heading-font text-lg font-bold text-forest-200">Dasar-Dasar Kehutanan</h1>
+     <p id="sidebar-school" class="text-xs text-forest-400 mt-1">Kelas X SMK • Kurikulum Merdeka</p>
+    </div>
+    <div class="mb-4">
+     <div class="bg-forest-700/50 rounded-full h-2 overflow-hidden">
+      <div id="progress-bar" class="progress-bar bg-gradient-to-r from-green-400 to-emerald-300 h-full rounded-full" style="width:0%"></div>
+     </div>
+     <p id="progress-text" class="text-xs text-forest-400 mt-1 text-center">0% selesai</p>
+    </div>
+    <div id="nav-list" class="flex flex-col gap-1 flex-1"></div>
+   </nav><!-- Mobile Header -->
+   <div class="md:hidden bg-forest-900 text-white p-3 flex items-center justify-between flex-shrink-0">
+    <div class="flex items-center gap-2"><span class="text-xl">🌲</span> <span class="font-bold text-sm">Modul Kehutanan</span>
+    </div><button id="mobile-menu-btn" class="p-2 rounded-lg bg-forest-700" aria-label="Menu"><i data-lucide="menu" class="w-5 h-5"></i></button>
+   </div>
+   <div id="mobile-nav" class="hidden md:hidden absolute inset-0 z-50 bg-forest-900/95 p-4 overflow-y-auto"><button id="mobile-close-btn" class="absolute top-4 right-4 text-white" aria-label="Tutup"><i data-lucide="x" class="w-6 h-6"></i></button>
+    <div id="mobile-nav-list" class="mt-12 flex flex-col gap-2"></div>
+   </div><!-- Main Content -->
+   <main id="main-content" class="flex-1 overflow-y-auto p-4 md:p-8">
+    <div id="content-area" class="max-w-4xl mx-auto"></div><!-- Navigation Buttons -->
+    <div class="max-w-4xl mx-auto flex justify-between mt-8 mb-4"><button id="prev-btn" class="flex items-center gap-2 px-5 py-3 bg-white border-2 border-forest-300 text-forest-700 rounded-xl font-semibold hover:bg-forest-50 transition-all disabled:opacity-40" disabled><i data-lucide="arrow-left" class="w-4 h-4"></i> Sebelumnya</button> <button id="next-btn" class="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-forest-600 to-forest-700 text-white rounded-xl font-semibold hover:from-forest-700 hover:to-forest-800 transition-all shadow-lg"><span>Selanjutnya</span> <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
+    </div>
+   </main>
+  </div>
+  <script>
+// ===== CONFIG & SDK =====
+const defaultConfig = {
+  module_title: 'Dasar-Dasar Kehutanan',
+  school_name: 'SMK Negeri 1',
+  background_color: '#f0fdf4',
+  surface_color: '#ffffff',
+  text_color: '#14532d',
+  primary_color: '#16a34a',
+  accent_color: '#8B5E3C'
+};
+
+window.elementSdk.init({
+  defaultConfig,
+  onConfigChange: async (config) => {
+    document.getElementById('sidebar-title').textContent = config.module_title || defaultConfig.module_title;
+    document.body.style.backgroundColor = config.background_color || defaultConfig.background_color;
+  },
+  mapToCapabilities: (config) => ({
+    recolorables: [
+      { get: () => config.background_color || defaultConfig.background_color, set: (v) => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
+      { get: () => config.surface_color || defaultConfig.surface_color, set: (v) => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); } },
+      { get: () => config.text_color || defaultConfig.text_color, set: (v) => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
+      { get: () => config.primary_color || defaultConfig.primary_color, set: (v) => { config.primary_color = v; window.elementSdk.setConfig({ primary_color: v }); } },
+      { get: () => config.accent_color || defaultConfig.accent_color, set: (v) => { config.accent_color = v; window.elementSdk.setConfig({ accent_color: v }); } }
+    ],
+    borderables: [],
+    fontEditable: {
+      get: () => config.font_family || 'Nunito',
+      set: (v) => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); }
+    },
+    fontSizeable: {
+      get: () => config.font_size || 16,
+      set: (v) => { config.font_size = v; window.elementSdk.setConfig({ font_size: v }); }
+    }
+  }),
+  mapToEditPanelValues: (config) => new Map([
+    ['module_title', config.module_title || defaultConfig.module_title],
+    ['school_name', config.school_name || defaultConfig.school_name]
+  ])
+});
+
+// ===== SECTIONS DATA =====
+const sections = [
+  { id: 'welcome', title: '🏠 Selamat Datang', icon: 'home' },
+  { id: 'tujuan', title: '🎯 Tujuan Pembelajaran', icon: 'target' },
+  { id: 'pengertian-kehutanan', title: '🌳 Pengertian Kehutanan', icon: 'trees' },
+  { id: 'pengertian-hutan', title: '🌲 Pengertian Hutan', icon: 'tree-pine' },
+  { id: 'fungsi-hutan', title: '⚡ Fungsi Hutan', icon: 'zap' },
+  { id: 'jenis-hutan', title: '🗂️ Jenis-Jenis Hutan', icon: 'layers' },
+  { id: 'keanekaragaman', title: '🦋 Keanekaragaman Hayati', icon: 'bug' },
+  { id: 'permasalahan', title: '⚠️ Permasalahan Kehutanan', icon: 'alert-triangle' },
+  { id: 'pelestarian', title: '💚 Upaya Pelestarian', icon: 'shield' },
+  { id: 'peran-masyarakat', title: '👥 Peran Masyarakat', icon: 'users' },
+  { id: 'studi-kasus', title: '📋 Studi Kasus', icon: 'clipboard' },
+  { id: 'aktivitas', title: '🎮 Aktivitas Interaktif', icon: 'gamepad-2' },
+  { id: 'kuis', title: '📝 Kuis', icon: 'file-question' },
+  { id: 'ringkasan', title: '📖 Ringkasan', icon: 'book-open' }
+];
+
+let currentSection = 0;
+let quizAnswers = {};
+let quizSubmitted = false;
+
+// ===== NAVIGATION =====
+function buildNav() {
+  const navHTML = sections.map((s, i) => `
+    <button class="nav-item text-left px-3 py-2 rounded-lg text-sm ${i === currentSection ? 'active' : 'text-forest-300 hover:bg-forest-700/50'}" data-idx="${i}">
+      ${s.title}
+    </button>
+  `).join('');
+  document.getElementById('nav-list').innerHTML = navHTML;
+  document.getElementById('mobile-nav-list').innerHTML = navHTML;
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.addEventListener('click', () => { goToSection(parseInt(btn.dataset.idx)); });
+  });
+  updateProgress();
+}
+
+function updateProgress() {
+  const pct = Math.round((currentSection / (sections.length - 1)) * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = pct + '% selesai';
+  document.getElementById('prev-btn').disabled = currentSection === 0;
+  document.getElementById('next-btn').querySelector('span').textContent = currentSection === sections.length - 1 ? 'Selesai 🎉' : 'Selanjutnya';
+}
+
+function goToSection(idx) {
+  currentSection = idx;
+  buildNav();
+  renderContent();
+  document.getElementById('main-content').scrollTop = 0;
+  document.getElementById('mobile-nav').classList.add('hidden');
+}
+
+// ===== CONTENT RENDERER =====
+function renderContent() {
+  const area = document.getElementById('content-area');
+  const id = sections[currentSection].id;
+  area.innerHTML = getContentHTML(id);
+  area.querySelector('.section-card')?.offsetHeight; // trigger reflow
+  lucide.createIcons();
+  if (id === 'aktivitas') initActivities();
+  if (id === 'kuis') initQuiz();
+}
+
+function getContentHTML(id) {
+  const contents = {
+    'welcome': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <div class="text-center">
+          <div class="text-6xl mb-4">🌳🌲🌴</div>
+          <h1 class="heading-font text-3xl md:text-4xl font-bold text-forest-900 mb-3">Pengenalan Kehutanan & Fungsi Hutan</h1>
+          <p class="text-forest-600 text-lg mb-6">Modul Pembelajaran Interaktif • Dasar-Dasar Kehutanan Kelas X SMK</p>
+          <div class="bg-gradient-to-r from-forest-100 to-emerald-50 rounded-2xl p-6 text-left max-w-xl mx-auto">
+            <h3 class="font-bold text-forest-800 mb-3 flex items-center gap-2"><i data-lucide="info" class="w-5 h-5"></i> Tentang Modul Ini</h3>
+            <p class="text-forest-700 text-sm leading-relaxed">Modul ini dirancang untuk membantu kamu memahami konsep dasar kehutanan, fungsi hutan, keanekaragaman hayati, serta permasalahan dan upaya pelestarian hutan Indonesia. Selamat belajar! 🍃</p>
+          </div>
+          <div class="mt-6 grid grid-cols-3 gap-3 max-w-md mx-auto">
+            <div class="bg-forest-50 rounded-xl p-3 text-center"><div class="text-2xl">📚</div><p class="text-xs text-forest-600 mt-1">10 Materi</p></div>
+            <div class="bg-forest-50 rounded-xl p-3 text-center"><div class="text-2xl">🎮</div><p class="text-xs text-forest-600 mt-1">3 Aktivitas</p></div>
+            <div class="bg-forest-50 rounded-xl p-3 text-center"><div class="text-2xl">📝</div><p class="text-xs text-forest-600 mt-1">10 Soal Kuis</p></div>
+          </div>
+        </div>
+      </div>`,
+
+    'tujuan': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6 flex items-center gap-3">🎯 Tujuan Pembelajaran</h2>
+        <p class="text-forest-600 mb-6">Setelah mempelajari modul ini, kamu diharapkan mampu:</p>
+        <div class="space-y-3">
+          ${['Menjelaskan pengertian kehutanan dan hutan', 'Mengidentifikasi fungsi hutan secara ekologis, ekonomi, dan sosial', 'Membedakan jenis-jenis hutan berdasarkan fungsi dan asalnya', 'Mendeskripsikan keanekaragaman hayati hutan Indonesia', 'Menganalisis permasalahan kehutanan di Indonesia', 'Merumuskan upaya pelestarian hutan', 'Menjelaskan peran masyarakat dalam menjaga kelestarian hutan'].map((t, i) => `
+            <div class="flex items-start gap-3 bg-forest-50 rounded-xl p-4">
+              <span class="bg-forest-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold flex-shrink-0">${i+1}</span>
+              <p class="text-forest-800 text-sm">${t}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>`,
+
+    'pengertian-kehutanan': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">🌳 Pengertian Kehutanan</h2>
+        <div class="bg-gradient-to-r from-forest-600 to-emerald-600 rounded-2xl p-6 text-white mb-6">
+          <p class="text-lg font-semibold mb-2">Definisi</p>
+          <p class="text-emerald-100 leading-relaxed"><strong>Kehutanan</strong> adalah sistem pengurusan yang bersangkut paut dengan hutan, kawasan hutan, dan hasil hutan yang diselenggarakan secara terpadu dan berkelanjutan. (UU No. 41 Tahun 1999)</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-4 mb-6">
+          <div class="bg-bark-50 rounded-xl p-5 border border-bark-200">
+            <div class="text-3xl mb-2">🏛️</div>
+            <h4 class="font-bold text-bark-700 mb-1">Aspek Pengelolaan</h4>
+            <p class="text-sm text-bark-600">Meliputi perencanaan, pemanfaatan, rehabilitasi, dan perlindungan hutan secara menyeluruh.</p>
+          </div>
+          <div class="bg-forest-50 rounded-xl p-5 border border-forest-200">
+            <div class="text-3xl mb-2">♻️</div>
+            <h4 class="font-bold text-forest-700 mb-1">Prinsip Berkelanjutan</h4>
+            <p class="text-sm text-forest-600">Pemanfaatan sumber daya hutan untuk generasi sekarang tanpa mengorbankan generasi mendatang.</p>
+          </div>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p class="text-sm text-amber-800"><strong>💡 Tahukah Kamu?</strong> Indonesia memiliki hutan tropis terluas ketiga di dunia setelah Brasil dan Kongo, dengan luas sekitar 92 juta hektar!</p>
+        </div>
+      </div>`,
+
+    'pengertian-hutan': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">🌲 Pengertian Hutan</h2>
+        <div class="bg-gradient-to-r from-emerald-700 to-green-600 rounded-2xl p-6 text-white mb-6">
+          <p class="text-emerald-100 leading-relaxed"><strong>Hutan</strong> adalah suatu kesatuan ekosistem berupa hamparan lahan berisi sumber daya alam hayati yang didominasi pepohonan dalam persekutuan alam lingkungannya, yang satu dengan lainnya tidak dapat dipisahkan.</p>
+        </div>
+        <h3 class="font-bold text-forest-800 mb-3">Ciri-Ciri Hutan:</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          ${[['🌿','Memiliki vegetasi tingkat pohon'],['🐾','Dihuni berbagai satwa'],['💧','Memiliki iklim mikro sendiri'],['🌍','Luas minimal 0,25 ha']].map(([e,t]) => `
+            <div class="bg-forest-50 rounded-xl p-4 text-center border border-forest-100">
+              <div class="text-2xl mb-2">${e}</div>
+              <p class="text-xs text-forest-700">${t}</p>
+            </div>
+          `).join('')}
+        </div>
+        <div class="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <span class="text-2xl">🔬</span>
+          <p class="text-sm text-blue-800">Hutan merupakan ekosistem kompleks dimana terjadi interaksi antara komponen biotik (makhluk hidup) dan abiotik (tanah, air, udara, cahaya).</p>
+        </div>
+      </div>`,
+
+    'fungsi-hutan': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">⚡ Fungsi Hutan</h2>
+        <p class="text-forest-600 mb-6">Hutan memiliki tiga fungsi utama yang saling berkaitan:</p>
+        <!-- Infografis -->
+        <div class="relative bg-gradient-to-br from-forest-50 to-emerald-50 rounded-2xl p-6 mb-6 border border-forest-200">
+          <div class="text-center mb-4">
+            <span class="text-4xl">🌳</span>
+            <h3 class="font-bold text-forest-800 text-lg">Fungsi Hutan</h3>
+          </div>
+          <div class="grid md:grid-cols-3 gap-4">
+            <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-green-500">
+              <h4 class="font-bold text-green-700 mb-2">🌍 Ekologis</h4>
+              <ul class="text-xs text-green-800 space-y-1">
+                <li>• Mengatur tata air & iklim</li>
+                <li>• Menyerap CO₂, menghasilkan O₂</li>
+                <li>• Mencegah erosi & banjir</li>
+                <li>• Habitat flora & fauna</li>
+                <li>• Menjaga kesuburan tanah</li>
+              </ul>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-amber-500">
+              <h4 class="font-bold text-amber-700 mb-2">💰 Ekonomi</h4>
+              <ul class="text-xs text-amber-800 space-y-1">
+                <li>• Sumber kayu & non-kayu</li>
+                <li>• Hasil hutan: rotan, madu, getah</li>
+                <li>• Ekowisata & jasa lingkungan</li>
+                <li>• Obat-obatan tradisional</li>
+                <li>• Lapangan kerja masyarakat</li>
+              </ul>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-blue-500">
+              <h4 class="font-bold text-blue-700 mb-2">👥 Sosial</h4>
+              <ul class="text-xs text-blue-800 space-y-1">
+                <li>• Sumber penghidupan masyarakat</li>
+                <li>• Nilai budaya & spiritual</li>
+                <li>• Penelitian & pendidikan</li>
+                <li>• Rekreasi & kesehatan mental</li>
+                <li>• Identitas masyarakat adat</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+          <p class="text-sm text-emerald-800"><strong>🌱 Ingat!</strong> Ketiga fungsi ini saling terkait. Jika fungsi ekologis terganggu, maka fungsi ekonomi dan sosial juga akan terpengaruh.</p>
+        </div>
+      </div>`,
+
+    'jenis-hutan': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">🗂️ Jenis-Jenis Hutan</h2>
+        <div class="mb-6">
+          <h3 class="font-bold text-forest-800 mb-3 flex items-center gap-2"><span class="bg-forest-600 text-white text-xs px-2 py-1 rounded">A</span> Berdasarkan Fungsi</h3>
+          <div class="grid md:grid-cols-3 gap-3">
+            <div class="bg-red-50 rounded-xl p-4 border border-red-200">
+              <div class="text-2xl mb-2">🛡️</div>
+              <h4 class="font-bold text-red-700 text-sm">Hutan Lindung</h4>
+              <p class="text-xs text-red-600 mt-1">Melindungi tata air, mencegah banjir, erosi, dan memelihara kesuburan tanah.</p>
+            </div>
+            <div class="bg-purple-50 rounded-xl p-4 border border-purple-200">
+              <div class="text-2xl mb-2">🏞️</div>
+              <h4 class="font-bold text-purple-700 text-sm">Hutan Konservasi</h4>
+              <p class="text-xs text-purple-600 mt-1">Melestarikan keanekaragaman hayati (Taman Nasional, Suaka Margasatwa, Cagar Alam).</p>
+            </div>
+            <div class="bg-amber-50 rounded-xl p-4 border border-amber-200">
+              <div class="text-2xl mb-2">🪵</div>
+              <h4 class="font-bold text-amber-700 text-sm">Hutan Produksi</h4>
+              <p class="text-xs text-amber-600 mt-1">Menghasilkan hasil hutan kayu dan non-kayu untuk memenuhi kebutuhan masyarakat.</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3 class="font-bold text-forest-800 mb-3 flex items-center gap-2"><span class="bg-bark-500 text-white text-xs px-2 py-1 rounded">B</span> Berdasarkan Asal</h3>
+          <div class="grid md:grid-cols-2 gap-3">
+            <div class="bg-green-50 rounded-xl p-4 border border-green-200">
+              <div class="text-2xl mb-2">🌳</div>
+              <h4 class="font-bold text-green-700 text-sm">Hutan Alam (Primer & Sekunder)</h4>
+              <p class="text-xs text-green-600 mt-1">Terbentuk secara alami tanpa campur tangan manusia. Hutan primer belum terganggu, hutan sekunder sudah pernah ditebang.</p>
+            </div>
+            <div class="bg-teal-50 rounded-xl p-4 border border-teal-200">
+              <div class="text-2xl mb-2">🌱</div>
+              <h4 class="font-bold text-teal-700 text-sm">Hutan Tanaman (Buatan)</h4>
+              <p class="text-xs text-teal-600 mt-1">Ditanam oleh manusia, biasanya monokultur (satu jenis). Contoh: hutan jati, hutan pinus, HTI.</p>
+            </div>
+          </div>
+        </div>
+      </div>`,
+
+    'keanekaragaman': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">🦋 Keanekaragaman Hayati Hutan Indonesia</h2>
+        <div class="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-6 text-white mb-6">
+          <p class="text-emerald-100 leading-relaxed">Indonesia merupakan negara <strong>megabiodiversitas</strong> — salah satu dari 17 negara dengan keanekaragaman hayati tertinggi di dunia!</p>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          ${[['🐅','350+','Mamalia'],['🦜','1.600+','Burung'],['🌺','30.000+','Tumbuhan'],['🦎','700+','Reptil']].map(([e,n,t]) => `
+            <div class="bg-forest-50 rounded-xl p-4 text-center border border-forest-100">
+              <div class="text-3xl mb-1">${e}</div>
+              <p class="font-bold text-forest-800 text-lg">${n}</p>
+              <p class="text-xs text-forest-600">Jenis ${t}</p>
+            </div>
+          `).join('')}
+        </div>
+        <h3 class="font-bold text-forest-800 mb-3">Satwa Endemik Indonesia:</h3>
+        <div class="grid md:grid-cols-3 gap-3">
+          ${[['🦧','Orangutan','Sumatera & Kalimantan'],['🐅','Harimau Sumatera','Sumatera'],['🦏','Badak Jawa','Ujung Kulon'],['🐘','Gajah Sumatera','Sumatera'],['🦅','Elang Jawa','Jawa'],['🐉','Komodo','NTT']].map(([e,n,l]) => `
+            <div class="flex items-center gap-3 bg-amber-50 rounded-lg p-3 border border-amber-100">
+              <span class="text-2xl">${e}</span>
+              <div><p class="font-semibold text-amber-800 text-sm">${n}</p><p class="text-xs text-amber-600">${l}</p></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`,
+
+    'permasalahan': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">⚠️ Permasalahan Kehutanan</h2>
+        <div class="space-y-4">
+          <div class="bg-red-50 rounded-xl p-5 border border-red-200">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-3xl">🪓</span>
+              <h4 class="font-bold text-red-700">Deforestasi</h4>
+            </div>
+            <p class="text-sm text-red-600">Penggundulan hutan untuk perkebunan, pertambangan, dan infrastruktur. Indonesia kehilangan rata-rata 680.000 ha hutan per tahun (2015-2019).</p>
+          </div>
+          <div class="bg-orange-50 rounded-xl p-5 border border-orange-200">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-3xl">🔥</span>
+              <h4 class="font-bold text-orange-700">Kebakaran Hutan</h4>
+            </div>
+            <p class="text-sm text-orange-600">Sebagian besar disebabkan aktivitas manusia (pembukaan lahan). Menghasilkan asap berbahaya, merusak ekosistem, dan melepaskan karbon ke atmosfer.</p>
+          </div>
+          <div class="bg-yellow-50 rounded-xl p-5 border border-yellow-200">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-3xl">🚛</span>
+              <h4 class="font-bold text-yellow-700">Penebangan Liar (Illegal Logging)</h4>
+            </div>
+            <p class="text-sm text-yellow-700">Penebangan tanpa izin yang merusak ekosistem, menghilangkan habitat satwa, dan merugikan negara triliunan rupiah per tahun.</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-5 border border-gray-200">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-3xl">🏭</span>
+              <h4 class="font-bold text-gray-700">Alih Fungsi Lahan</h4>
+            </div>
+            <p class="text-sm text-gray-600">Konversi hutan menjadi perkebunan kelapa sawit, pertambangan, dan pemukiman yang tidak terkendali.</p>
+          </div>
+        </div>
+      </div>`,
+
+    'pelestarian': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">💚 Upaya Pelestarian Hutan</h2>
+        <div class="grid md:grid-cols-2 gap-4">
+          ${[
+            ['🌱','Reboisasi & Rehabilitasi','Penanaman kembali pohon di area yang rusak dan pemulihan ekosistem hutan.'],
+            ['📜','Penegakan Hukum','Penerapan UU Kehutanan secara tegas terhadap perusak hutan dan pelaku illegal logging.'],
+            ['🏞️','Kawasan Konservasi','Penetapan Taman Nasional, Cagar Alam, dan Suaka Margasatwa untuk melindungi keanekaragaman hayati.'],
+            ['🌾','Agroforestri','Sistem pertanian yang mengombinasikan tanaman pertanian dengan pohon hutan.'],
+            ['📡','Teknologi Pemantauan','Penggunaan satelit dan drone untuk memantau kondisi hutan secara real-time.'],
+            ['📚','Edukasi & Kesadaran','Program pendidikan lingkungan untuk meningkatkan kesadaran masyarakat tentang pentingnya hutan.']
+          ].map(([e,t,d]) => `
+            <div class="bg-forest-50 rounded-xl p-5 border border-forest-100 hover:shadow-md transition-shadow">
+              <div class="text-2xl mb-2">${e}</div>
+              <h4 class="font-bold text-forest-800 text-sm mb-1">${t}</h4>
+              <p class="text-xs text-forest-600">${d}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>`,
+
+    'peran-masyarakat': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">👥 Peran Masyarakat dalam Menjaga Hutan</h2>
+        <div class="bg-gradient-to-r from-bark-500 to-bark-600 rounded-2xl p-6 text-white mb-6">
+          <p class="text-bark-100">Pelestarian hutan bukan hanya tugas pemerintah, tetapi tanggung jawab seluruh masyarakat termasuk kita sebagai pelajar!</p>
+        </div>
+        <div class="space-y-3">
+          ${[
+            'Tidak membuang sampah di hutan dan lingkungan sekitar',
+            'Ikut kegiatan penanaman pohon (Go Green)',
+            'Melaporkan aktivitas penebangan liar kepada pihak berwenang',
+            'Mengurangi penggunaan kertas berlebihan (paperless)',
+            'Mendukung produk ramah lingkungan dan bersertifikat',
+            'Menjadi relawan konservasi di daerah masing-masing',
+            'Mengedukasi keluarga dan teman tentang pentingnya hutan',
+            'Mendukung hutan adat dan kearifan lokal masyarakat'
+          ].map((t, i) => `
+            <div class="flex items-center gap-3 bg-green-50 rounded-lg p-3 border border-green-100">
+              <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">${i+1}</span>
+              <p class="text-sm text-green-800">${t}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>`,
+
+    'studi-kasus': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">📋 Studi Kasus</h2>
+        <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-6 mb-6">
+          <h3 class="font-bold text-red-800 text-lg mb-2">🔥 Kebakaran Hutan Kalimantan 2019</h3>
+          <p class="text-sm text-red-700 mb-4">Pada tahun 2019, kebakaran hutan dan lahan di Kalimantan dan Sumatera membakar lebih dari 1,6 juta hektar. Asap tebal menyebar ke negara tetangga, sekolah ditutup, dan ribuan warga mengalami gangguan pernapasan (ISPA).</p>
+          <div class="grid md:grid-cols-3 gap-3 mb-4">
+            <div class="bg-white rounded-lg p-3 text-center"><p class="text-2xl font-bold text-red-600">1,6 jt</p><p class="text-xs text-red-500">Hektar terbakar</p></div>
+            <div class="bg-white rounded-lg p-3 text-center"><p class="text-2xl font-bold text-red-600">900K+</p><p class="text-xs text-red-500">Kasus ISPA</p></div>
+            <div class="bg-white rounded-lg p-3 text-center"><p class="text-2xl font-bold text-red-600">$5,2 M</p><p class="text-xs text-red-500">Kerugian ekonomi</p></div>
+          </div>
+          <h4 class="font-bold text-red-800 mb-2">Penyebab:</h4>
+          <ul class="text-sm text-red-700 space-y-1 mb-4">
+            <li>• Pembukaan lahan dengan cara membakar (land clearing)</li>
+            <li>• Musim kemarau panjang akibat El Niño</li>
+            <li>• Drainase gambut yang membuat tanah mudah terbakar</li>
+          </ul>
+        </div>
+        <div class="bg-green-50 border-2 border-green-200 rounded-2xl p-6">
+          <h3 class="font-bold text-green-800 text-lg mb-2">✅ Solusi yang Dapat Dilakukan:</h3>
+          <div class="space-y-2">
+            ${['Moratorium pembukaan lahan gambut baru','Pembuatan sekat kanal untuk membasahi gambut','Penegakan hukum terhadap pembakar lahan','Sistem peringatan dini kebakaran berbasis satelit','Pemberdayaan masyarakat dalam pencegahan kebakaran','Restorasi ekosistem gambut yang terdegradasi'].map(s => `
+              <div class="flex items-center gap-2"><span class="text-green-500">✓</span><p class="text-sm text-green-800">${s}</p></div>
+            `).join('')}
+          </div>
+        </div>
+      </div>`,
+
+    'aktivitas': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">🎮 Aktivitas Interaktif</h2>
+        
+        <!-- Activity 1: Matching -->
+        <div class="mb-8">
+          <h3 class="font-bold text-forest-800 mb-3 flex items-center gap-2"><span class="bg-blue-500 text-white text-xs px-2 py-1 rounded">1</span> Cocokkan Istilah</h3>
+          <p class="text-sm text-forest-600 mb-4">Seret istilah ke kotak yang sesuai dengan definisinya:</p>
+          <div id="match-terms" class="flex flex-wrap gap-2 mb-4"></div>
+          <div id="match-targets" class="space-y-3"></div>
+          <div id="match-feedback" class="mt-3 hidden"></div>
+        </div>
+
+        <!-- Activity 2: Drag & Drop Categorize -->
+        <div class="mb-8">
+          <h3 class="font-bold text-forest-800 mb-3 flex items-center gap-2"><span class="bg-purple-500 text-white text-xs px-2 py-1 rounded">2</span> Kategorikan Fungsi Hutan</h3>
+          <p class="text-sm text-forest-600 mb-4">Seret setiap fungsi ke kategori yang benar:</p>
+          <div id="cat-items" class="flex flex-wrap gap-2 mb-4"></div>
+          <div class="grid md:grid-cols-3 gap-3">
+            <div class="border-2 border-dashed border-green-300 rounded-xl p-3 min-h-[100px]" id="cat-ekologis"><p class="text-xs font-bold text-green-700 mb-2">🌍 Ekologis</p><div class="space-y-1"></div></div>
+            <div class="border-2 border-dashed border-amber-300 rounded-xl p-3 min-h-[100px]" id="cat-ekonomi"><p class="text-xs font-bold text-amber-700 mb-2">💰 Ekonomi</p><div class="space-y-1"></div></div>
+            <div class="border-2 border-dashed border-blue-300 rounded-xl p-3 min-h-[100px]" id="cat-sosial"><p class="text-xs font-bold text-blue-700 mb-2">👥 Sosial</p><div class="space-y-1"></div></div>
+          </div>
+          <div id="cat-feedback" class="mt-3 hidden"></div>
+          <button id="cat-check-btn" class="mt-3 px-4 py-2 bg-forest-600 text-white rounded-lg text-sm font-semibold hover:bg-forest-700">Cek Jawaban</button>
+        </div>
+      </div>`,
+
+    'kuis': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">📝 Kuis (10 Soal)</h2>
+        <div id="quiz-container"></div>
+        <div class="mt-6 text-center">
+          <button id="quiz-submit" class="px-8 py-3 bg-gradient-to-r from-forest-600 to-emerald-600 text-white rounded-xl font-bold text-lg hover:from-forest-700 hover:to-emerald-700 shadow-lg transition-all">Kirim Jawaban</button>
+        </div>
+        <div id="quiz-result" class="mt-6 hidden"></div>
+      </div>`,
+
+    'ringkasan': `
+      <div class="section-card bg-white rounded-3xl p-8 shadow-xl border border-forest-100">
+        <h2 class="heading-font text-2xl font-bold text-forest-900 mb-6">📖 Ringkasan Materi</h2>
+        <div class="space-y-4">
+          ${[
+            ['🌳','Kehutanan adalah pengurusan hutan, kawasan hutan, dan hasil hutan secara terpadu dan berkelanjutan.'],
+            ['🌲','Hutan adalah ekosistem berupa hamparan lahan yang didominasi pepohonan dengan berbagai organisme yang saling berinteraksi.'],
+            ['⚡','Fungsi hutan mencakup fungsi ekologis (pengatur iklim), ekonomi (sumber hasil hutan), dan sosial (penghidupan masyarakat).'],
+            ['🗂️','Jenis hutan dibagi berdasarkan fungsi (lindung, konservasi, produksi) dan asal (alam dan tanaman/buatan).'],
+            ['🦋','Indonesia memiliki keanekaragaman hayati yang sangat tinggi sebagai negara megabiodiversitas.'],
+            ['⚠️','Permasalahan utama: deforestasi, kebakaran hutan, penebangan liar, dan alih fungsi lahan.'],
+            ['💚','Upaya pelestarian meliputi reboisasi, penegakan hukum, konservasi, dan pemanfaatan teknologi.'],
+            ['👥','Setiap individu memiliki peran penting dalam menjaga kelestarian hutan Indonesia.']
+          ].map(([e,t]) => `
+            <div class="flex items-start gap-3 bg-forest-50 rounded-xl p-4 border border-forest-100">
+              <span class="text-xl flex-shrink-0">${e}</span>
+              <p class="text-sm text-forest-800">${t}</p>
+            </div>
+          `).join('')}
+        </div>
+        <div class="mt-8 text-center bg-gradient-to-r from-forest-100 to-emerald-100 rounded-2xl p-6">
+          <div class="text-4xl mb-3">🎉</div>
+          <h3 class="font-bold text-forest-800 text-lg">Selamat! Kamu telah menyelesaikan modul ini.</h3>
+          <p class="text-sm text-forest-600 mt-2">Terus pelajari dan jaga hutan Indonesia untuk masa depan yang lebih baik! 🌿</p>
+        </div>
+      </div>`
+  };
+  return contents[id] || '<p>Konten tidak ditemukan.</p>';
+}
+
+// ===== ACTIVITIES =====
+function initActivities() {
+  // Matching activity
+  const matchData = [
+    { term: 'Reboisasi', def: 'Penanaman kembali hutan yang rusak' },
+    { term: 'Deforestasi', def: 'Penggundulan hutan secara besar-besaran' },
+    { term: 'Biodiversitas', def: 'Keanekaragaman hayati/makhluk hidup' },
+    { term: 'Konservasi', def: 'Perlindungan dan pelestarian alam' }
+  ];
+  const shuffled = [...matchData].sort(() => Math.random() - 0.5);
+  const termsEl = document.getElementById('match-terms');
+  const targetsEl = document.getElementById('match-targets');
+  
+  termsEl.innerHTML = shuffled.map(m => `<div class="drag-item bg-forest-600 text-white px-3 py-2 rounded-lg text-sm font-semibold" draggable="true" data-term="${m.term}">${m.term}</div>`).join('');
+  targetsEl.innerHTML = matchData.map(m => `<div class="drop-zone border-2 border-dashed border-forest-300 rounded-lg p-3 flex items-center gap-3" data-answer="${m.term}"><span class="text-xs text-forest-600 flex-1">${m.def}</span><span class="dropped-item text-sm font-semibold text-forest-800"></span></div>`).join('');
+
+  // Drag events for matching
+  termsEl.querySelectorAll('.drag-item').forEach(item => {
+    item.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', item.dataset.term));
+  });
+  targetsEl.querySelectorAll('.drop-zone').forEach(zone => {
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('drag-over');
+      const term = e.dataTransfer.getData('text/plain');
+      zone.querySelector('.dropped-item').textContent = term;
+      const src = termsEl.querySelector(`[data-term="${term}"]`);
+      if (src) src.style.opacity = '0.4';
+      // Check if correct
+      if (term === zone.dataset.answer) {
+        zone.classList.add('bg-green-50', 'border-green-400');
+      } else {
+        zone.classList.add('bg-red-50', 'border-red-400');
+      }
+    });
+  });
+
+  // Categorize activity
+  const catData = [
+    { text: 'Menyerap CO₂', cat: 'ekologis' },
+    { text: 'Sumber kayu', cat: 'ekonomi' },
+    { text: 'Nilai budaya', cat: 'sosial' },
+    { text: 'Mencegah erosi', cat: 'ekologis' },
+    { text: 'Ekowisata', cat: 'ekonomi' },
+    { text: 'Penelitian', cat: 'sosial' }
+  ];
+  const catItemsEl = document.getElementById('cat-items');
+  const shuffledCat = [...catData].sort(() => Math.random() - 0.5);
+  catItemsEl.innerHTML = shuffledCat.map(c => `<div class="drag-item bg-bark-500 text-white px-3 py-2 rounded-lg text-xs font-semibold" draggable="true" data-cat="${c.cat}" data-text="${c.text}">${c.text}</div>`).join('');
+
+  catItemsEl.querySelectorAll('.drag-item').forEach(item => {
+    item.addEventListener('dragstart', e => e.dataTransfer.setData('application/json', JSON.stringify({ text: item.dataset.text, cat: item.dataset.cat })));
+  });
+
+  ['cat-ekologis', 'cat-ekonomi', 'cat-sosial'].forEach(id => {
+    const zone = document.getElementById(id);
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('drag-over');
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      const tag = document.createElement('div');
+      tag.className = 'bg-white rounded px-2 py-1 text-xs border';
+      tag.textContent = data.text;
+      tag.dataset.cat = data.cat;
+      zone.querySelector('div').appendChild(tag);
+      const src = catItemsEl.querySelector(`[data-text="${data.text}"]`);
+      if (src) src.style.display = 'none';
+    });
+  });
+
+  document.getElementById('cat-check-btn').addEventListener('click', () => {
+    let correct = 0, total = 0;
+    ['cat-ekologis', 'cat-ekonomi', 'cat-sosial'].forEach(id => {
+      const cat = id.replace('cat-', '');
+      document.getElementById(id).querySelectorAll('[data-cat]').forEach(el => {
+        total++;
+        if (el.dataset.cat === cat) { correct++; el.classList.add('border-green-500', 'bg-green-50'); }
+        else { el.classList.add('border-red-500', 'bg-red-50'); }
+      });
+    });
+    const fb = document.getElementById('cat-feedback');
+    fb.classList.remove('hidden');
+    fb.innerHTML = `<div class="p-3 rounded-lg ${correct === total && total > 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'} text-sm font-semibold">${correct === total && total > 0 ? '🎉 Sempurna!' : `Kamu mendapat ${correct}/${total} benar. Coba lagi!`}</div>`;
+  });
+}
+
+// ===== QUIZ =====
+const quizData = [
+  { q: 'Apa yang dimaksud dengan kehutanan menurut UU No. 41 Tahun 1999?', opts: ['Ilmu tentang pohon','Pengurusan hutan secara terpadu dan berkelanjutan','Penebangan hutan secara sistematis','Penanaman pohon di perkotaan'], ans: 1 },
+  { q: 'Fungsi hutan yang berkaitan dengan pengaturan tata air dan pencegahan erosi termasuk fungsi...', opts: ['Ekonomi','Sosial','Ekologis','Produksi'], ans: 2 },
+  { q: 'Hutan yang berfungsi melindungi keanekaragaman hayati disebut hutan...', opts: ['Lindung','Konservasi','Produksi','Rakyat'], ans: 1 },
+  { q: 'Manakah yang BUKAN merupakan contoh hasil hutan non-kayu?', opts: ['Rotan','Madu','Papan kayu','Getah karet'], ans: 2 },
+  { q: 'Berapa perkiraan luas hutan Indonesia?', opts: ['50 juta ha','72 juta ha','92 juta ha','120 juta ha'], ans: 2 },
+  { q: 'Penebangan pohon tanpa izin resmi disebut...', opts: ['Deforestasi','Reboisasi','Illegal logging','Degradasi'], ans: 2 },
+  { q: 'Orangutan merupakan satwa endemik yang hidup di...', opts: ['Jawa & Bali','Sumatera & Kalimantan','Sulawesi & Papua','NTT & NTB'], ans: 1 },
+  { q: 'Penanaman kembali hutan yang telah rusak disebut...', opts: ['Deforestasi','Eksploitasi','Reboisasi','Transmigrasi'], ans: 2 },
+  { q: 'Sistem pertanian yang menggabungkan tanaman dengan pohon hutan disebut...', opts: ['Monokultur','Agroforestri','Silvopastura','Hidroponik'], ans: 1 },
+  { q: 'Apa dampak utama kebakaran hutan terhadap kesehatan manusia?', opts: ['Diare','ISPA (gangguan pernapasan)','Patah tulang','Malaria'], ans: 1 }
+];
+
+function initQuiz() {
+  const container = document.getElementById('quiz-container');
+  container.innerHTML = quizData.map((q, i) => `
+    <div class="mb-5 bg-forest-50 rounded-xl p-5 border border-forest-100">
+      <p class="font-semibold text-forest-900 text-sm mb-3">${i+1}. ${q.q}</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+        ${q.opts.map((o, j) => `
+          <button class="quiz-option text-left px-4 py-3 rounded-lg border-2 ${quizAnswers[i] === j ? 'border-forest-500 bg-forest-100' : 'border-gray-200 bg-white'} text-sm hover:border-forest-400" data-q="${i}" data-o="${j}">
+            <span class="font-semibold text-forest-600 mr-2">${['A','B','C','D'][j]}.</span>${o}
+          </button>
+        `).join('')}
+      </div>
+      <div id="quiz-fb-${i}" class="mt-2 text-sm hidden"></div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.quiz-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (quizSubmitted) return;
+      const qi = parseInt(btn.dataset.q);
+      const oi = parseInt(btn.dataset.o);
+      quizAnswers[qi] = oi;
+      // Update selection visual
+      container.querySelectorAll(`[data-q="${qi}"]`).forEach(b => { b.classList.remove('border-forest-500','bg-forest-100'); b.classList.add('border-gray-200','bg-white'); });
+      btn.classList.remove('border-gray-200','bg-white');
+      btn.classList.add('border-forest-500','bg-forest-100');
+    });
+  });
+
+  document.getElementById('quiz-submit').addEventListener('click', () => {
+    quizSubmitted = true;
+    let score = 0;
+    quizData.forEach((q, i) => {
+      const fb = document.getElementById(`quiz-fb-${i}`);
+      fb.classList.remove('hidden');
+      if (quizAnswers[i] === q.ans) {
+        score++;
+        fb.innerHTML = `<span class="text-green-700 font-semibold">✅ Benar!</span>`;
+        container.querySelector(`[data-q="${i}"][data-o="${q.ans}"]`)?.classList.add('border-green-500','bg-green-50');
+      } else {
+        fb.innerHTML = `<span class="text-red-700 font-semibold">❌ Salah.</span> Jawaban benar: <strong>${['A','B','C','D'][q.ans]}</strong>`;
+        if (quizAnswers[i] !== undefined) container.querySelector(`[data-q="${i}"][data-o="${quizAnswers[i]}"]`)?.classList.add('border-red-500','bg-red-50');
+        container.querySelector(`[data-q="${i}"][data-o="${q.ans}"]`)?.classList.add('border-green-500','bg-green-50');
+      }
+    });
+    const result = document.getElementById('quiz-result');
+    result.classList.remove('hidden');
+    const pct = Math.round(score / quizData.length * 100);
+    result.innerHTML = `<div class="text-center p-6 rounded-2xl ${pct >= 70 ? 'bg-green-100 border-2 border-green-300' : 'bg-amber-100 border-2 border-amber-300'}">
+      <p class="text-3xl font-bold ${pct >= 70 ? 'text-green-700' : 'text-amber-700'}">${score}/${quizData.length}</p>
+      <p class="text-lg font-semibold mt-1 ${pct >= 70 ? 'text-green-600' : 'text-amber-600'}">${pct >= 70 ? '🎉 Luar biasa!' : '📚 Pelajari lagi materinya ya!'}</p>
+      <p class="text-sm mt-2 ${pct >= 70 ? 'text-green-600' : 'text-amber-600'}">Skor: ${pct}% ${pct >= 70 ? '- Kamu lulus!' : '- Minimum kelulusan 70%'}</p>
+    </div>`;
+    document.getElementById('quiz-submit').style.display = 'none';
+  });
+}
+
+// ===== INIT =====
+document.getElementById('prev-btn').addEventListener('click', () => { if (currentSection > 0) goToSection(currentSection - 1); });
+document.getElementById('next-btn').addEventListener('click', () => { if (currentSection < sections.length - 1) goToSection(currentSection + 1); });
+document.getElementById('mobile-menu-btn')?.addEventListener('click', () => document.getElementById('mobile-nav').classList.remove('hidden'));
+document.getElementById('mobile-close-btn')?.addEventListener('click', () => document.getElementById('mobile-nav').classList.add('hidden'));
+
+buildNav();
+renderContent();
+lucide.createIcons();
+</script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0a94116607740f0',t:'MTc4MTI3MTQ4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
